@@ -123,49 +123,25 @@
                         :serial t))
               :serial t)))
 
-(defvar *lisa-root-pathname*
-  (make-pathname :directory
-                 (pathname-directory *load-truename*)
-                 :host (pathname-host *load-truename*)
-                 :device (pathname-device *load-truename*)))
+(defsystem lisa/logical-pathnames
+  :name "lisa/logical-pathnames"
+  :author "R. Mattes"
+  :licence "LGPL"
+  :description "Provides logical pathnames to the Lisa expert system shell sources"
+  :depends-on ("lisa")
+  :components
+  ((:module src
+            :components
+            ((:file "logical-pathnames")))))
 
-(defun make-lisa-path (relative-path)
-  (concatenate 'string (namestring *lisa-root-pathname*)
-               relative-path))
 
-(setf (logical-pathname-translations "lisa")
-      `(("src;**;" ,(make-lisa-path "src/**/"))
-        ("lib;**;*.*" ,(make-lisa-path "lib/**/"))
-        ("config;*.*" ,(make-lisa-path "config/"))
-        ("debugger;*.*" ,(make-lisa-path "src/debugger/"))
-        ("contrib;**;" ,(make-lisa-path "contrib/**/"))))
-
-(defun lisa-debugger ()
-  (translate-logical-pathname "lisa:debugger;lisa-debugger.lisp"))
-
-;;; Sets up the environment so folks can use the non-portable form of REQUIRE
-;;; with some implementations...
-
-#+:allegro
-(setf system:*require-search-list*
-  (append system:*require-search-list*
-          `(:newest ,(lisa-debugger))))
-
-#+:clisp
-(setf custom:*load-paths*
-  (append custom:*load-paths* `(,(lisa-debugger))))
-
-#+:openmcl
-(pushnew (pathname-directory (lisa-debugger)) ccl:*module-search-path* :test #'equal)
-
-#+:lispworks
-(let ((loadable-modules `(("lisa-debugger" . ,(lisa-debugger)))))
-  (lw:defadvice (require lisa-require :around)
-      (module-name &optional pathname)
-    (let ((lisa-module
-           (find module-name loadable-modules
-                 :test #'string=
-                 :key #'car)))
-      (if (null lisa-module)
-          (lw:call-next-advice module-name pathname)
-        (lw:call-next-advice module-name (cdr lisa-module))))))
+(defsystem lisa/debugger
+  :name "lisa/debugger"
+  :author "R. Mattes"
+  :licence "LGPL"
+  :description "Provides a better ebugger interface for the Lisa expert system shell"
+  :depends-on ("lisa" "lisa/logical-pathnames")
+  :components
+  ((:module src
+            :components
+            ((:file "debugger")))))
